@@ -1,3 +1,14 @@
+# macOS
+.DS_Store
+.DS_Store?
+._*
+
+# Notebook generated outputs
+figures/
+logs/
+judgements.csv
+mincut_clusters.csv
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
