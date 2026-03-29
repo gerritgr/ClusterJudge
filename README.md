@@ -17,22 +17,23 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ### 2. Clone the repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/gerritgr/ClusterJudge/
 cd ClusterJudge
 ```
 
 ### 3. Create a virtual environment and install dependencies
 
 ```bash
-uv sync
+uv venv clusterjudgeenv
+uv sync --python clusterjudgeenv/bin/python
 ```
 
-This reads `pyproject.toml` and installs all required packages into `.venv`.
+This reads `pyproject.toml` and installs all required packages into `clusterjudgeenv`.
 
 ### 4. Launch JupyterLab
 
 ```bash
-uv run jupyter lab
+clusterjudgeenv/bin/jupyter lab
 ```
 
 Open `main.ipynb` in the browser tab that appears and run all cells top-to-bottom (**Run → Run All Cells**).
