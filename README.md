@@ -4,6 +4,8 @@
 A noisy judge repeatedly picks the closest pair among three randomly chosen data points (Bradley–Terry model).  
 The resulting judgements are used to build graphs, perform max/min-cut clustering, construct a meta-graph of comparisons, and learn a 2-D embedding via PyTorch gradient descent.
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/gerritgr/ClusterJudge/blob/main/main.ipynb)
+
 ---
 
 ## Quickstart (local — using [uv](https://github.com/astral-sh/uv))
@@ -62,21 +64,15 @@ Open `main.ipynb` in the browser tab that appears and run all cells top-to-botto
 
 ---
 
+## Running on Google Colab
+
+1. Upload `main.ipynb` to [colab.research.google.com](https://colab.research.google.com).
+2. Uncomment the `!pip install` line at the top of **Cell 1** if any package is missing.
+3. Click **Runtime → Run all**.
+
+---
+
 ## Running with Docker
-
-Build the image locally:
-
-```bash
-docker build -t clusterjudge:local .
-```
-
-Run JupyterLab from the container:
-
-```bash
-docker run --rm -p 8888:8888 clusterjudge:local
-```
-
-Then open [http://127.0.0.1:8888/lab](http://127.0.0.1:8888/lab) and run `main.ipynb`.
 
 If the GitHub Actions workflow has already published an image for this repository, you can pull it directly:
 
@@ -85,29 +81,9 @@ docker pull ghcr.io/gerritgr/clusterjudge:latest
 docker run --rm -p 8888:8888 ghcr.io/gerritgr/clusterjudge:latest
 ```
 
+Then open [http://127.0.0.1:8888/lab](http://127.0.0.1:8888/lab) and run `main.ipynb`.
+
 The container starts JupyterLab without a token for convenience, so it should only be used on a trusted machine or trusted local network.
-
-### Automatic Docker publishing with GitHub Actions
-
-This repository includes a workflow at `.github/workflows/docker.yml` that builds and publishes a Docker image to GitHub Container Registry (GHCR).
-
-The usual setup steps are:
-
-1. Add a `Dockerfile` that installs the project dependencies and starts JupyterLab.
-2. Commit the workflow file so GitHub Actions runs on pushes to `main` and on version tags like `v0.1.0`.
-3. In the GitHub repository settings, open **Settings → Actions → General** and allow workflows to have read/write permission so `${{ secrets.GITHUB_TOKEN }}` can publish packages.
-4. Push to `main` once to publish `ghcr.io/<your-github-name>/clusterjudge:latest`.
-5. Optionally push a tag such as `v0.1.0` to publish a versioned image tag alongside `latest`.
-
-If you prefer Docker Hub instead of GHCR, the workflow can be adjusted to log in with `DOCKER_USERNAME` and `DOCKER_PASSWORD` repository secrets and push to `docker.io/<user>/<image>` instead.
-
----
-
-## Running on Google Colab
-
-1. Upload `main.ipynb` to [colab.research.google.com](https://colab.research.google.com).
-2. Uncomment the `!pip install` line at the top of **Cell 1** if any package is missing.
-3. Click **Runtime → Run all**.
 
 ---
 
