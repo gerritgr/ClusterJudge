@@ -12,6 +12,8 @@ RUN apt-get update \
 
 WORKDIR /app
 
+RUN chown appuser:appuser /app
+
 COPY --chown=appuser:appuser pyproject.toml uv.lock README.md ./
 
 USER appuser
