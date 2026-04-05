@@ -2,7 +2,7 @@
 
 **ClusterJudge** is a method for comparing and learning clusterings from noisy pairwise judgements.  
 A noisy judge repeatedly picks the closest pair among three randomly chosen data points (Bradley–Terry model).  
-The resulting judgements are used to build graphs, perform max/min-cut clustering, construct a meta-graph of comparisons, and learn a 2-D embedding via PyTorch gradient descent.
+The notebook builds several clustering pipelines from these judgements, including max-cut, min-cut, conflict-graph optimisation, learned embeddings, and an evaluation loop that compares the methods across repeated synthetic experiments.
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/gerritgr/ClusterJudge/blob/main/main.ipynb)
 
@@ -61,6 +61,7 @@ uv sync --active
 ```
 
 Open `main.ipynb` in the browser tab that appears and run all cells top-to-bottom (**Run → Run All Cells**).
+The notebook is modular: each code cell defines reusable functions, and the final evaluation cell reuses the same functions instead of re-implementing the methods.
 
 ---
 
@@ -92,15 +93,19 @@ The container starts JupyterLab without a token for convenience, so it should on
 
 | Cell | Description |
 |------|-------------|
-| **1 – Setup** | Imports, random seeds, device & dtype settings, output directories |
-| **2 – Dataset Generation** | 30 2-D points from 3 Gaussians; scatter plot with hollow markers |
-| **3 – Judgement Generation** | Bradley–Terry noisy judge (n = 20 triples); saves `judgements.csv` |
-| **4 – Cluster Generation (Max Cut)** | Greedy k = 3 max-cut on solid-edge graph |
-| **5 – Cluster Generation II (Min Cut)** | Hierarchical Stoer-Wagner k = 3 min-cut on dashed-edge graph; saves `mincut_clusters.csv` |
-| **6 – Meta Graph** | Directed graph of pair comparisons; GT-coloured nodes, conflicting edges highlighted |
-| **7 – Learn Embedding** | PyTorch Adam optimisation of 2-D Bradley–Terry likelihood; Procrustes-aligned comparison plot |
+| **1 – Setup** | Imports, reproducibility helpers, logging, file export helpers, and shared utility functions |
+| **2 – Dataset Generation** | 30 2-D points from 3 Gaussians; exports ground-truth CSV plus a reusable plotting function |
+| **3 – Judgement Generation** | Bradley–Terry noisy judge on random triplets; exports judgements plus plot data CSV |
+| **4 – Cluster Generation (Max Cut)** | Greedy k = 3 max-cut clustering on winner edges |
+| **5 – Cluster Generation II (Min Cut)** | Hierarchical min-cut clustering on dashed loser edges |
+| **6 – Meta Graph** | Directed graph of pair comparisons with GT-aware node and edge colouring |
+| **7 – Meta Graph Optimization** | Discrete reassignment of point labels to minimize conflicting meta-graph edges |
+| **8 – Learn Embedding** | PyTorch optimisation of a 2-D embedding from the judgement likelihood |
+| **9 – KNN Learn Embedding** | KNN-graph clustering on the learned embedding |
+| **10 – Comparison of All Methods** | Repeated benchmark over varying numbers of clusters and query budgets with confidence intervals |
 
-All figures are saved to `figures/` (`.jpg` + `.pdf`) and logs to `logs/run.log`.
+All exported data and figures for `main.ipynb` are written to `figures/main2/`, and logs are written to `logs/main2.log`.
+For each figure, the notebook also saves a CSV file that can be read back by the corresponding plotting function to reproduce the `.jpg` and `.pdf` output.
 
 ---
 

@@ -1,8 +1,5 @@
 # Task: Create the following files:
-- creat or update gitignore to contain DS_store files
-- create a readme  that explains how to run the code. Use uv as a python package manager und jupyter lab.
-- create a main notebook main.ipynb. containing the code 
-- main.ipynb. is a method to compare clusterings.
+- create a main notebook main2.ipynb, containing the code, that runs within the uv environment described in README.md 
 
 ## General Requirements
 General instructions for the main.ipynb:
@@ -16,6 +13,12 @@ General instructions for the main.ipynb:
 - Display all plots inline
 - Add comments after each hyperparmeter, that explains the effects of increasing/decreasing this value. 
 - you need one python package to identify min and max cuts in graphs and networkX. 
+- all cells should contain a function so that they can be called from other cells, too (specifically, in cell 10, we do the overal evaluation. This should work without re-implementing anything).
+- evey time you plot a figure (e.g., ground_truth.jpg), follow this design patter: 
+    a) you export the underlying data as a csv file (e.g. ground_truth.csv) (in the same folder as the figure)
+    b) you have a function to plot the figure that you call with the path of the .csv file
+    c) this function reads the .csv file and creates the .jpg and .pdf plots.
+    d) the plotting function does not depend on global variables so that it can be called stand-alone to reprodcue the figure from the .csv file
 
 ---
 
@@ -84,10 +87,20 @@ General instructions for the main.ipynb:
  nodes that represent two datapoints that are in fact in the same cluters should be shown in seaborn green, otherwise in seabonr red.
  - edges that go from a green to a red node should be blue. These are conflicting edges.
 
+---
+
+### **Cell 7: Meta Graph Optimization**
+
+- You consider the same meta graph as in cell 6. 
+- you start with a random a asignment of each datapoint to one of three clusters.
+- you optimize the clustering by re-assigning the datapoint->cluster map so that the number of conflicting edges becomes minimal.
+- you can use out of the box discrete optimization.
+- find a suitable regularization so that not all datapoints end up in the same cluster. 
+- plot the clustering using a scatter plot. Use the ground truth coordinates and then the shapes and colors of the inferred clustering. 
 
  ---
 
-### **Cell 7: Learn Embedding
+### **Cell 8: Learn Embedding
 - now the goal is to recreate a 2d embedding (2 should be hyperparam here) of the data
 - each datapoint a,b,c,d,... again has 2d coordinates.
 - start with random positions (from a 2d normal) for each points
@@ -96,4 +109,24 @@ General instructions for the main.ipynb:
 - of course, use a proper loglikehood way of computing the likehood of the whole dataset and use batching for optmization
 - at the end, plot the learned embeddings (on the left) and the ground truth embeddings (on the right ) and a lines between matching elments. these lines should be very thin and have low opacity.
 
+ ---
 
+### **Cell 9: KNN Learn Embedding
+- use the output from the last  cell
+- perform a KNN based clustering with 3 clusters on the output of this cell
+- plot this. 
+
+ ---
+
+### **Cell 10: Comparision of all Methods
+- Now properly evaluate the differnt methods
+- Therefore do the following inside a loop (for 20 loops):
+-- Create ground truth data with 2 to 5 clusters and 50 datapoints
+-- Create 1000 random queries resulting in 100 paris that look like ((a,b),c)
+-- test each method (mincut, maxcut, conflict graph, knn on embeddings) on multiplte splits. 
+-- These splits are that you use the first x paris of the 1000 pairs. x ranges from 100 to 1000 with steps of size 100.
+-- you evaluate the quality of each clustering by looking at the fractions of pairs that are consistent between the ground truth and the inferred clsuter.
+-- consistent here means that they are either both in the same cluster or both not in the same cluster.
+-- also compute the class balances accuracy by considering this as a prediction task where each pair of dataoints get is the input and the output is in_same_cluster or not_in_same_cluster.
+-- this results in 9 performance measures for each method in each run 
+- at the end, you use seaborn lineplot to show the number of samples (100 to 1000) on the x axis and the quality (class balanced acc) on the y axis for each method using proper bootstrapped confidence invervals.
