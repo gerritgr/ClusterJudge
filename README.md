@@ -95,7 +95,7 @@ The container starts JupyterLab without a token for convenience, so it should on
 |------|-------------|
 | **1 – Setup** | Imports, reproducibility helpers, logging, file export helpers, and shared utility functions |
 | **2 – Dataset Generation** | 30 2-D points from 3 Gaussians; exports ground-truth CSV plus a reusable plotting function |
-| **3 – Judgement Generation** | Bradley–Terry noisy judge on random triplets; exports judgements plus plot data CSV |
+| **3 – Judgement Generation** | Bradley–Terry noisy judge on random triplets; exports judgements, plot data, and a judge-correctness summary |
 | **4 – Cluster Generation (Max Cut)** | Greedy k = 3 max-cut clustering on winner edges |
 | **5 – Cluster Generation II (Min Cut)** | Hierarchical min-cut clustering on dashed loser edges |
 | **6 – Meta Graph** | Directed graph of pair comparisons with GT-aware node and edge colouring |
@@ -104,7 +104,7 @@ The container starts JupyterLab without a token for convenience, so it should on
 | **9 – KNN Learn Embedding** | KNN-graph clustering on the learned embedding |
 | **10 – Comparison of All Methods** | Repeated benchmark over varying numbers of clusters and query budgets with confidence intervals |
 
-All exported data and figures for `main.ipynb` are written to `figures/main2/`, and logs are written to `logs/main2.log`.
+All exported data and figures for `main.ipynb` are written to `figures/main/`, and logs are written to `logs/main.log`.
 For each figure, the notebook also saves a CSV file that can be read back by the corresponding plotting function to reproduce the `.jpg` and `.pdf` output.
 
 ---

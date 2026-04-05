@@ -10,6 +10,10 @@ General instructions for the main.ipynb:
 - Use **clean, modular, well-structured ML code**
 - Log outputs (.log or .txt) and save figures to disk (`.jpg` and .pdf). 
 - Use seaborn for figures with a very clean, paper-ready, stlye. Use seaborn colors
+-- specifically, do not show grid lines
+-- use the same colors and shapes for the clustering among all cells
+-- use the same equal aspect ratio every time you plot the clusters. 
+-- do not show grid lines in any plots, this is not clean.
 - Display all plots inline
 - Add comments after each hyperparmeter, that explains the effects of increasing/decreasing this value. 
 - you need one python package to identify min and max cuts in graphs and networkX. 
@@ -59,7 +63,8 @@ General instructions for the main.ipynb:
 - then for each judgement  ((a,b),c)  you add 3 edges. 2 dashed edges with low opacity beween a,c and b,c representing datapoints that are not likely to be in a cluster.
 - and then a real edge betweeb a,b representing that these might be in a cluster.
 - use a differnt color for each judgement ((a,b),c), resulting in n=20 differnt colors being used.
-- save the judgements as a csv file.
+- save the judgements as a csv file. One row per judgement. 
+- at the end plot, how often the judge was correct or incorrect. Meaning the pair with the shortest distance was chosen (correct) or any other pair (incorrect).
 
 ---
 
@@ -108,7 +113,7 @@ General instructions for the main.ipynb:
 - the likehood models looks at each judgment  ((a,b),c) and considers the likehood based on the given distances similar to the generation in cell 2, always assume a temperature of 1
 - of course, use a proper loglikehood way of computing the likehood of the whole dataset and use batching for optmization
 - at the end, plot the learned embeddings (on the left) and the ground truth embeddings (on the right ) and a lines between matching elments. these lines should be very thin and have low opacity.
-
+- for the plot containing the learned embeddings, the aspect ratio does not have to be equal or the same as in the other plots.
  ---
 
 ### **Cell 9: KNN Learn Embedding
