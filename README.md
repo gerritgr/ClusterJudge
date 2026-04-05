@@ -74,11 +74,12 @@ Open `main.ipynb` in the browser tab that appears and run all cells top-to-botto
 
 ## Running with Docker
 
-If the GitHub Actions workflow has already published an image for this repository, you can pull it directly:
+Docker images are published only for version tags such as `0.1` or `0.2.0`.
+If a version has already been published, you can pull it directly:
 
 ```bash
-docker pull ghcr.io/gerritgr/clusterjudge:latest
-docker run --rm -p 8888:8888 ghcr.io/gerritgr/clusterjudge:latest
+docker pull ghcr.io/gerritgr/clusterjudge:0.1
+docker run --rm -p 8888:8888 ghcr.io/gerritgr/clusterjudge:0.1
 ```
 
 Then open [http://127.0.0.1:8888/lab](http://127.0.0.1:8888/lab) and run `main.ipynb`.
