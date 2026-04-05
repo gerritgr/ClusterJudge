@@ -1,0 +1,11 @@
+.git
+.github
+.gitignore
+.venv
+.uv-cache
+.ipynb_checkpoints
+clusterjudgeenv
+figures
+logs
+__pycache__
+*.pyc
