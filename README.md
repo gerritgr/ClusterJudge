@@ -21,19 +21,41 @@ git clone https://github.com/gerritgr/ClusterJudge/
 cd ClusterJudge
 ```
 
-### 3. Create a virtual environment and install dependencies
+### 3. Create a virtual environment
+
+```bash
+uv venv
+```
+
+This creates a project-local virtual environment in `.venv/`.
+
+### 4. Install dependencies
+
+If `uv.lock` already exists and should be used as-is:
+
+```bash
+uv sync --frozen
+```
+
+If `uv.lock` should be created or refreshed first:
+
+```bash
+uv lock
+uv sync
+```
+
+If you prefer a custom environment name instead of `.venv/`, use:
 
 ```bash
 uv venv clusterjudgeenv
-uv sync --python clusterjudgeenv/bin/python
+source clusterjudgeenv/bin/activate
+uv sync --active
 ```
 
-This reads `pyproject.toml` and installs all required packages into `clusterjudgeenv`.
-
-### 4. Launch JupyterLab
+### 5. Launch JupyterLab
 
 ```bash
-clusterjudgeenv/bin/jupyter lab
+.venv/bin/jupyter lab
 ```
 
 Open `main.ipynb` in the browser tab that appears and run all cells top-to-bottom (**Run → Run All Cells**).
@@ -74,4 +96,3 @@ See `pyproject.toml` for the full list.  Key packages:
 - [Seaborn](https://seaborn.pydata.org/) / [Matplotlib](https://matplotlib.org/) — paper-ready figures
 - [Pandas](https://pandas.pydata.org/) — CSV I/O
 - [JupyterLab](https://jupyterlab.readthedocs.io/)
-
