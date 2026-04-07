@@ -1,0 +1,73 @@
+# Task: Initialize this repository from scratch.
+
+Create or update the repository so that it contains the following:
+
+- a `.gitignore` that ignores common macOS clutter such as `.DS_Store`, Python cache files, virtual environments, notebook checkpoints, and local build/cache folders
+- a `README.md` that explains how to set up and run the project locally with `uv` and JupyterLab
+- a `main.ipynb` notebook as the main entry point for the project
+- a minimal `pyproject.toml` suitable for a notebook-based Python project managed with `uv`
+- a `Dockerfile` that can run the notebook environment with JupyterLab
+- a GitHub Actions workflow that builds and publishes the Docker image to `ghcr.io`
+
+## README requirements
+
+The `README.md` should:
+
+- explain what the repository is for in a short introductory section
+- explain how to install `uv`
+- explain how to clone the repository and enter the project directory
+- explain two `uv` setup paths:
+  1. when `uv.lock` does **not** exist yet and needs to be created
+  2. when `uv.lock` already exists and should be used as-is
+- explain how to start JupyterLab locally and open `main.ipynb`
+- explain how to run the repository via Docker once a published image exists
+- explain how to pull and run the published image from `ghcr.io`
+- keep the instructions practical and concise
+
+Use `uv` as the package manager throughout the documentation.
+
+## Notebook requirements
+
+Create `main.ipynb` as a very small initial notebook that:
+
+- runs in the `uv` environment described in the README
+- imports `numpy`, `pandas`, `seaborn`, `networkx`, and `torch`
+- is structured cleanly as an initial starter notebook
+- is valid as a Jupyter notebook file
+
+This initial notebook does **not** need to implement the full project logic yet. It just needs to be a correct starting point with the required imports and a sensible setup cell.
+
+## Python project requirements
+
+Create a minimal `pyproject.toml` that:
+
+- defines the project metadata
+- includes the dependencies needed for the starter notebook
+- works with `uv`
+- is suitable for a notebook-first repository rather than a packaged Python library
+
+## Docker requirements
+
+Create a `Dockerfile` that:
+
+- installs the project dependencies
+- launches JupyterLab
+- exposes port `8888`
+- is suitable for a notebook-based workflow
+
+## GitHub Actions requirements
+
+Create a workflow that:
+
+- builds the Docker image
+- publishes it to `ghcr.io`
+- uses modern GitHub Actions conventions
+- is suitable for this repository
+
+## Important constraints
+
+- actually create or update the files listed above
+- prefer clear, modern, maintainable defaults
+- assume this is the initial setup of the repository
+- do not add unnecessary complexity
+- keep the style clean and practical
