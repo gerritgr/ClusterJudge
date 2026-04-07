@@ -23,38 +23,17 @@ git clone https://github.com/gerritgr/ClusterJudge/
 cd ClusterJudge
 ```
 
-### 3. Create a virtual environment
+### 3. Create the virtual environment and install dependencies
 
 ```bash
 uv venv
-```
-
-This creates a project-local virtual environment in `.venv/`.
-
-### 4. Install dependencies
-
-If `uv.lock` already exists and should be used as-is:
-
-```bash
 uv sync --frozen
 ```
 
-If `uv.lock` should be created or refreshed first:
+This uses the checked-in `uv.lock` file as-is and creates a project-local virtual environment in `.venv/`.
+If you intentionally want to refresh the lock file later, run `uv lock` and then `uv sync`.
 
-```bash
-uv lock
-uv sync
-```
-
-If you prefer a custom environment name instead of `.venv/`, use:
-
-```bash
-uv venv clusterjudgeenv
-source clusterjudgeenv/bin/activate
-uv sync --active
-```
-
-### 5. Launch JupyterLab
+### 4. Launch JupyterLab
 
 ```bash
 .venv/bin/jupyter lab
