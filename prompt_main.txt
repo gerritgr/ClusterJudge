@@ -111,6 +111,7 @@ General instructions for the main.ipynb:
 - find a suitable regularization so that not all datapoints end up in the same cluster. 
 - plot the clustering using a scatter plot. Use the ground truth coordinates and then the shapes and colors of the inferred clustering. 
 - use a multi-start procedure where by default you start from k=10 random initlializations
+- this should have a progress bar
 
  ---
 
