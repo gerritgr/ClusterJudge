@@ -15,6 +15,7 @@ General instructions for the main.ipynb:
 -- use the same equal aspect ratio every time you plot the clusters. 
 -- do not show grid lines in any plots, this is not clean.
 - Display all plots inline
+- use progress bars where reasonable
 - Add comments after each hyperparmeter, that explains the effects of increasing/decreasing this value. 
 - you need one python package to identify min and max cuts in graphs and networkX. 
 - all cells should contain a function so that they can be called from other cells, too (specifically, in cell 10, we do the overal evaluation. This should work without re-implementing anything).
@@ -41,7 +42,7 @@ General instructions for the main.ipynb:
 - Generate a **2D spatial dataset** with **30 points**
 - Datas are in 3 clusters corresponding to 3 2d-gaussians
 1. mean (0,0) and variance 1.0
-2. mean (2.0) and variance 0.3
+2. mean (2.0,0) and variance 0.3
 3. mean (-5,-5) and variacne 0.5.
 - plot the data using a 2d scatter plot and three differnt colors for the 3 clusers.
 - for each mark, only show the edge (empty marks with only a border), and also use 3 differnt symbols , triangle up, circle, triangle down
@@ -52,33 +53,36 @@ General instructions for the main.ipynb:
 ### **Cell 3: Judgement Generation**
 
 - Now you have a noisy judge that works as follows:
-- you randomly pick 3 ransom datapoints (a,b,c) from the dataset for n=20 times
+- you randomly pick 3 random datapoints (a,b,c) from the dataset for n=200 times
 - not that, a,b,c are all pairs themselves or 2d coordinates
 - the noisy judge says which pair (a,b), (b,c), (a,c) is the closes to each other. 
 - This results in an outcome like  ((a,b),c) meaning that a,b is the closest pair among the three
 - to actually come up with the data you compute the three distances a_b, a_c, b_c, and then compute a Bradley–Terry type scoring.
 - That is, the probabilty of a_b being selected it the probabilty is proportional to exp(- a_b). 
 - add an optional temperature parameter that is by default 1 (has no influence).  
-- Finally plot the judgements. Therefore, first plot the dataset using a scatter plot, with the 3 clusters having 3 shades of gray.
+- Finally plot the judgements fist n_cut = 5 judgements. Therefore, first plot the dataset using a scatter plot, with the 3 clusters having 3 shades of gray.
 - then for each judgement  ((a,b),c)  you add 3 edges. 2 dashed edges with low opacity beween a,c and b,c representing datapoints that are not likely to be in a cluster.
 - and then a real edge betweeb a,b representing that these might be in a cluster.
-- use a differnt color for each judgement ((a,b),c), resulting in n=20 differnt colors being used.
+- use a differnt color for each judgement ((a,b),c), resulting in n_cut = 5 differnt colors being used.
 - save the judgements as a csv file. One row per judgement. 
 - at the end plot, how often the judge was correct or incorrect. Meaning the pair with the shortest distance was chosen (correct) or any other pair (incorrect).
 
 ---
 
-### **Cell 4: Cluster Generation**
+### **Cell 4: Cluster Generation MaxCut**
 
 - read in the judgements form the previous cells
 - build a clustering with k=3 clusters basd on the idea of a graph cut. 
-- Therefore you build a graph using only the actual (non dashed) edges.
+- Therefore you build a graph using only the dashed edges.
 - try to cluster the graph so that this maximizes the edges cut (maxcut)  
 - visualize the original data (2d coordinates) as a scatter plot and the proposed clustering in three colors. 
+- draw the dashed edges with 30% opacity between the marks
+- you can have an extra prameter at the beginning for regularizatino (make sure clusters have approx. the same size)
 
 ---
 #### **Cell 5: Cluster Generation II*
-- Same as in cell 4 but now use the dashed edges and find a min cut. 
+- Same as in cell 4 but now use the non-dashed edges and find a min cut. 
+- also the dashed edges with 30% opacity between the marks in the final plot
 - also save this
 
 ---
@@ -99,9 +103,10 @@ General instructions for the main.ipynb:
 - You consider the same meta graph as in cell 6. 
 - you start with a random a asignment of each datapoint to one of three clusters.
 - you optimize the clustering by re-assigning the datapoint->cluster map so that the number of conflicting edges becomes minimal.
-- you can use out of the box discrete optimization.
+- you can use out of the box discrete optimization. make sure that you can leave local minima and during the optimization remember the best solution so far.
 - find a suitable regularization so that not all datapoints end up in the same cluster. 
 - plot the clustering using a scatter plot. Use the ground truth coordinates and then the shapes and colors of the inferred clustering. 
+- use a multi-start procedure where by default you start from k=10 random initlializations
 
  ---
 
@@ -114,11 +119,12 @@ General instructions for the main.ipynb:
 - of course, use a proper loglikehood way of computing the likehood of the whole dataset and use batching for optmization
 - at the end, plot the learned embeddings (on the left) and the ground truth embeddings (on the right ) and a lines between matching elments. these lines should be very thin and have low opacity.
 - for the plot containing the learned embeddings, the aspect ratio does not have to be equal or the same as in the other plots.
+- use a multi-start procedure where by default you start from k=10 random initlializations
  ---
 
-### **Cell 9: KNN Learn Embedding
+### **Cell 9: K-means Clustering on the Embedding
 - use the output from the last  cell
-- perform a KNN based clustering with 3 clusters on the output of this cell
+- perform a k-means based clustering with 3 clusters on the output of this cell
 - plot this. 
 
  ---
@@ -135,3 +141,4 @@ General instructions for the main.ipynb:
 -- also compute the class balances accuracy by considering this as a prediction task where each pair of dataoints get is the input and the output is in_same_cluster or not_in_same_cluster.
 -- this results in 9 performance measures for each method in each run 
 - at the end, you use seaborn lineplot to show the number of samples (100 to 1000) on the x axis and the quality (class balanced acc) on the y axis for each method using proper bootstrapped confidence invervals.
+- use a progress bar
