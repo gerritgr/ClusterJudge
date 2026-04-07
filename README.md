@@ -10,30 +10,30 @@ The notebook builds several clustering pipelines from these judgements, includin
 
 ## Quickstart (local — using [uv](https://github.com/astral-sh/uv))
 
-### 1. Install `uv`
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-### 2. Clone the repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/gerritgr/ClusterJudge/
 cd ClusterJudge
 ```
 
-### 3. Create the virtual environment and install dependencies
+### 2. Create the virtual environment and install dependencies
 
 ```bash
 uv venv
 uv sync --frozen
 ```
 
+If you do not have `uv` installed yet, install it first with:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
 This uses the checked-in `uv.lock` file as-is and creates a project-local virtual environment in `.venv/`.
 If you intentionally want to refresh the lock file later, run `uv lock` and then `uv sync`.
 
-### 4. Launch JupyterLab
+### 3. Launch JupyterLab
 
 ```bash
 .venv/bin/jupyter lab
