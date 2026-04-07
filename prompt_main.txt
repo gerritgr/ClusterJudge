@@ -53,7 +53,7 @@ General instructions for the main.ipynb:
 ### **Cell 3: Judgement Generation**
 
 - Now you have a noisy judge that works as follows:
-- you randomly pick 3 random datapoints (a,b,c) from the dataset for n=200 times
+- you randomly pick 3 random datapoints (a,b,c) from the dataset for n=100 times
 - not that, a,b,c are all pairs themselves or 2d coordinates
 - the noisy judge says which pair (a,b), (b,c), (a,c) is the closes to each other. 
 - This results in an outcome like  ((a,b),c) meaning that a,b is the closest pair among the three
