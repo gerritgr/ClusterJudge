@@ -101,7 +101,7 @@ The container starts JupyterLab without a token for convenience, so it should on
 | **6 – Meta Graph** | Directed graph of pair comparisons with GT-aware node and edge colouring |
 | **7 – Meta Graph Optimization** | Discrete reassignment of point labels to minimize conflicting meta-graph edges |
 | **8 – Learn Embedding** | PyTorch optimisation of a 2-D embedding from the judgement likelihood |
-| **9 – KNN Learn Embedding** | KNN-graph clustering on the learned embedding |
+| **9 – K-means Clustering on the Embedding** | K-means clustering on the learned embedding |
 | **10 – Comparison of All Methods** | Repeated benchmark over varying numbers of clusters and query budgets with confidence intervals |
 
 All exported data and figures for `main.ipynb` are written to `figures/main/`, and logs are written to `logs/main.log`.

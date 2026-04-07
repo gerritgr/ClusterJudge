@@ -72,18 +72,21 @@ General instructions for the main.ipynb:
 ### **Cell 4: Cluster Generation MaxCut**
 
 - read in the judgements form the previous cells
-- build a clustering with k=3 clusters basd on the idea of a graph cut. 
+- build a clustering with k=3 clusters based on the idea of a graph cut. 
+- Have an extra prameter at the beginning for regularization (make sure clusters have approx. the same size)
 - Therefore you build a graph using only the dashed edges.
 - try to cluster the graph so that this maximizes the edges cut (maxcut)  
 - visualize the original data (2d coordinates) as a scatter plot and the proposed clustering in three colors. 
 - draw the dashed edges with 30% opacity between the marks
-- you can have an extra prameter at the beginning for regularizatino (make sure clusters have approx. the same size)
+- if there are more than draw_cut = 30 edges, only draw draw_cut = 30 random edgess to not convolute the plot.
 
 ---
 #### **Cell 5: Cluster Generation II*
 - Same as in cell 4 but now use the non-dashed edges and find a min cut. 
 - also the dashed edges with 30% opacity between the marks in the final plot
-- also save this
+- also save this an extra prameter at the beginning for regularization of clutser sizes
+- if there are more than draw_cut = 30 edges, only draw draw_cut = 30 random edgess to not convolute the plot.
+
 
 ---
 
@@ -95,6 +98,7 @@ General instructions for the main.ipynb:
 - plot this graph, with nodes being annotaed with the corresponding pair. Given the original ground truth clustering,
  nodes that represent two datapoints that are in fact in the same cluters should be shown in seaborn green, otherwise in seabonr red.
  - edges that go from a green to a red node should be blue. These are conflicting edges.
+- if there are more than draw_cut = 50 edges, only draw draw_cut = 50 random edgess to not convolute the plot.
 
 ---
 
