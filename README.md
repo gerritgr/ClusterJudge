@@ -46,7 +46,7 @@ The notebook is modular: each code cell defines reusable functions, and the fina
 
 ## Running on Google Colab
 
-1. Upload `main.ipynb` to [colab.research.google.com](https://colab.research.google.com).
+1. Click the Colab badge above, or upload `main.ipynb` to [colab.research.google.com](https://colab.research.google.com).
 2. Uncomment the `!pip install` line at the top of **Cell 1** if any package is missing.
 3. Click **Runtime → Run all**.
 
