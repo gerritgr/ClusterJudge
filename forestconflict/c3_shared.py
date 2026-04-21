@@ -1,5 +1,7 @@
 
-"""# Spatio-Temporal Forest Fire
+
+"""# Spatio-Temporal Forest Fire 
+ run with  uv run --project .. python c3_shared.py
 
 ## Simulation
 """
@@ -30,61 +32,29 @@ import seaborn as sns
 from scipy.spatial.distance import cdist
 from scipy.linalg import cholesky
 
-# ---------- 0. Environment-aware helpers ------------------------------------
+# ---------- 1. Environment-aware output directory ---------------------------
 try:
     import google.colab  # type: ignore
     IN_COLAB = True
 except ModuleNotFoundError:
     IN_COLAB = False
 
-
-def get_sim_dir() -> Path:
-    return Path("/content/drive/MyDrive/A_ForestConflict") if IN_COLAB else Path("ForestConflict")
-
-
-# ---------- 0. Progress-bar utility -----------------------------------------
-try:
-    if IN_COLAB:
-        from tqdm.notebook import tqdm        # nicer in Colab notebooks
-    else:
-        from tqdm.auto import tqdm            # safer for scripts and terminals
-except Exception:                             # noqa: BLE001
-    tqdm = None                               # type: ignore
-
-
-def get_pbar(total: int, desc: str):
-    """Return a context-managed progress-bar or a dummy printer."""
-
-    class _Dummy:
-        def __enter__(self):                # noqa: D401
-            print(f"[{desc}] start ({total} steps)")
-            self.i = 0
-            return self
-
-        def set_postfix(self, **kwargs):    # noqa: D401
-            if kwargs:
-                kv = ", ".join(f"{k}={v}" for k, v in kwargs.items())
-                print(f" → {kv}")
-
-        def update(self, n=1):
-            self.i += n
-            print(f"   {self.i}/{total}")
-
-        def __exit__(self, exc_type, exc, tb):  # noqa: D401
-            print(f"[{desc}] done")
-
-    return tqdm(total=total, desc=desc) if tqdm else _Dummy()
-
-# ---------- 1. Environment-aware output directory ---------------------------
-SIM_DIR = get_sim_dir()
+SIM_DIR = Path("/content/drive/MyDrive/B_ForestConflict") if IN_COLAB else Path("ForestConflict")
 SIM_DIR.mkdir(parents=True, exist_ok=True)
 
 # ---------- 2. Experiment hyper-parameters ----------------------------------
-NUM_RUNS = 200 # this should be 100
-J_LIST = [20, 50, 75, 100]            # ← single resolution parameter
+NUM_RUNS = 200 # Paper EXP runs are made with 400
+J_LIST = [10, 20, 50, 75, 100]            # ← single resolution parameter
 SETUPS = {
     "mining_on": 10.0,
     "mining_off": 5.0,
+}
+
+# Stable setup-specific seed offsets.
+# This replaces Python's built-in hash(...), which is randomized across sessions.
+SETUP_SEED_OFFSETS = {
+    "mining_on": 0,
+    "mining_off": 10_000,
 }
 
 # ---------- 3. Model parameters (unchanged) ---------------------------------
@@ -107,9 +77,13 @@ RAIN_PARAMS = {
                            # ↑lengthscale ⇒ broader, smoother rain patches;
                            # ↓lengthscale ⇒ smaller, speckled showers.
 
-    "persist": 0.90,       # Temporal AR(1) coefficient ρ (0–1).
-                           # ↑persist ⇒ rain patterns linger longer from one
-                           # time slice to the next; ↓persist ⇒ flashier rain.
+    "persist": 0.90,       # Interpreted below as the correlation over ONE
+                           # full unit of simulation time (not per discrete step).
+                           # This is important: the old code used a fixed AR(1)
+                           # coefficient per step, which changes meaning when J
+                           # changes. We now convert this into an OU rate so that
+                           # refinement J→∞ approximates the same continuous-time
+                           # process.
 }
 
 DENSITY_PARAMS = {
@@ -189,49 +163,84 @@ def init_conflict_events() -> np.ndarray:
     return np.zeros((N, N), dtype=np.uint8)
 
 
-# ---------- 6. Spatio-temporal GP helper for rain ---------------------------
-def ar_gp_3d(N_spatial: int, N_temporal: int, *,
+# ---------- 6. OU-in-time + spatial GP helper for rain ----------------------
+def ou_gp_3d(N_spatial: int, N_temporal: int, *,
+             dt: float,
              spatial_lengthscale: float = 0.1,
              temporal_correlation: float = 0.8,
              variance: float = 1.0,
              seed: int | None = None) -> np.ndarray:
     """
-    Return a (T, N, N) array drawn from a separable AR(1)-in-time,
-    squared-exponential-GP-in-space process.
+    Return a (T, N, N) array from a continuous-time Ornstein–Uhlenbeck (OU)
+    process in time, with a squared-exponential GP in space.
 
-        X₀  ~  GP(0, K)
-        Xₜ  = ρ X_{t-1} + √(1−ρ²) ϵₜ, ϵₜ ~ GP(0, K)
+    Continuous-time model:
+        dX_t(s) = -lambda * X_t(s) dt + sigma * dW_t^(K)(s),
 
-    Cost: 𝑂(T·N⁴) instead of a full 3-D kriging solve.
+    where:
+      • s is the spatial location,
+      • W_t^(K) is Gaussian noise that is white in time but correlated in space
+        with covariance kernel K,
+      • the stationary marginal field at each fixed time has covariance
+            variance * K.
+
+    Why this is better than a fixed AR(1) coefficient:
+      If one keeps X_t = rho * X_{t-1} + ... with rho fixed while dt changes,
+      then the physical time-correlation changes with resolution J. That breaks
+      meaningful convergence as J→∞.
+
+      Here, we instead derive the discrete update from the OU process:
+          X_{n+1} = a * X_n + eta_n,
+      with
+          a = exp(-lambda * dt),
+      and eta_n chosen so that the stationary marginal variance stays constant.
+
+      We interpret `temporal_correlation` as the correlation over ONE unit of
+      simulation time. Therefore, for any dt:
+          a(dt) = temporal_correlation ** dt = exp(log(rho_unit) * dt)
+      which is exactly resolution-consistent.
     """
     if seed is not None:
         rng = np.random.default_rng(seed)
     else:
         rng = np.random.default_rng()
 
-    # Spatial covariance matrix and its Cholesky
+    # Build the spatial covariance matrix on the N_spatial x N_spatial grid.
     grid = np.linspace(0, 1, N_spatial)
     Xg, Yg = np.meshgrid(grid, grid, indexing="ij")
     coords = np.column_stack([Xg.ravel(), Yg.ravel()])
     dists = cdist(coords, coords)
+
+    # Squared-exponential spatial covariance.
     K = variance * np.exp(-0.5 * (dists / spatial_lengthscale) ** 2)
-    K += 1e-6 * np.eye(K.shape[0])                 # jitter
+
+    # Small jitter for numerical stability.
+    K += 1e-6 * np.eye(K.shape[0])
+
+    # Cholesky factor so Lc @ N(0, I) ~ N(0, K)
     Lc = cholesky(K, lower=True)
 
     field = np.empty((N_temporal, N_spatial, N_spatial), dtype=np.float32)
 
-    # t = 0
+    rho_unit = temporal_correlation
+    if not (0.0 < rho_unit < 1.0):
+        raise ValueError("temporal_correlation must lie in (0, 1)")
+
+    # Resolution-consistent one-step persistence.
+    a = rho_unit ** dt
+
+    # Innovation scale chosen so stationary marginal covariance remains K.
+    innovation_scale = np.sqrt(1.0 - a ** 2)
+
+    # Initial state drawn from the stationary marginal GP(0, K).
     z0 = Lc @ rng.standard_normal(N_spatial * N_spatial)
     field[0] = z0.reshape(N_spatial, N_spatial)
 
-    alpha = temporal_correlation
-    sigma = np.sqrt((1.0 - alpha ** 2) * variance)
-
-    # t ≥ 1
+    # OU recursion through time.
     for t_idx in range(1, N_temporal):
-        innovation = Lc @ rng.standard_normal(N_spatial * N_spatial)
-        innovation = innovation.reshape(N_spatial, N_spatial)
-        field[t_idx] = alpha * field[t_idx - 1] + sigma * innovation
+        epsilon = Lc @ rng.standard_normal(N_spatial * N_spatial)
+        epsilon = epsilon.reshape(N_spatial, N_spatial)
+        field[t_idx] = a * field[t_idx - 1] + innovation_scale * epsilon
 
     return field
 
@@ -299,22 +308,32 @@ def conflict_forward(rng: np.random.Generator, mines_prev: np.ndarray,
     return conflicts
 
 
-# ---------- 8. Single-simulation routine (GP rain integrated) ---------------
+# ---------- 8. Single-simulation routine (OU rain integrated) ---------------
 def run_once(J: int, intensity: float, seed: int) -> dict[str, np.ndarray]:
-    _set_grid(J)                 # ← ensure grid matches this J
-    rng = np.random.default_rng(seed)
+    _set_grid(J)                 # ensure grid matches this J
+
+    # Use separate derived seeds for independent random streams.
+    # This keeps the whole run reproducible, while avoiding reuse of the exact
+    # same seed for both the rain-field generator and the event generator.
+    rain_seed = seed + 1
+    event_seed = seed + 2
+
+    rng = np.random.default_rng(event_seed)
     dt = 1 / (J - 1)
     win = int(np.ceil(CONFLICT_PARAMS["time_window"] / dt))
 
-    # --- NEW: draw entire spatio-temporal GP field for rain -----------------
-    gp_field = ar_gp_3d(
+    # Draw the latent rain field from the OU-in-time + spatial GP model.
+    gp_field = ou_gp_3d(
         N_spatial=J,
         N_temporal=J,
+        dt=dt,
         spatial_lengthscale=RAIN_PARAMS["lengthscale"],
         temporal_correlation=RAIN_PARAMS["persist"],
         variance=1.0,
-        seed=seed,
+        seed=rain_seed,
     ).astype(np.float32)
+
+    # Threshold latent GP values into a binary rain mask.
     rain = (gp_field < RAIN_PARAMS["threshold"]).astype(np.uint8)
 
     rho       = np.empty((J, N, N), dtype=np.float32)
@@ -325,9 +344,7 @@ def run_once(J: int, intensity: float, seed: int) -> dict[str, np.ndarray]:
     mines[0] = init_mining_events()
     conflicts[0] = init_conflict_events()
 
-    # ------------------------------------------------------------------------
     for i in range(1, J):
-        # rain[i] already pre-computed
         rho[i] = density_forward(rho[i - 1], rain[i - 1], mines[i - 1], dt)
         mines[i] = mining_forward(rng, rho[i - 1], conflicts[:i], intensity, dt, win)
         conflicts[i] = conflict_forward(rng, mines[:i], conflicts[:i], dt, win)
@@ -340,7 +357,7 @@ def run_once(J: int, intensity: float, seed: int) -> dict[str, np.ndarray]:
     }
 
 
-# ---------- 9. Full experiment (unchanged apart from J) ---------------------
+# ---------- 9. Full experiment (unchanged apart from stable seeds) ----------
 def main():  # noqa: C901
     tasks = list(product(SETUPS.items(), J_LIST, range(NUM_RUNS)))
 
@@ -365,29 +382,31 @@ def main():  # noqa: C901
     records: list[dict[str, int | str]] = []
     seed_base = 42
 
-    with get_pbar(total=len(tasks), desc="Simulations") as pbar:
-        for (setup_name, intensity), J, run in tasks:
-            sim_file = SIM_DIR / f"{setup_name}_J{J}_run{run}.pkl"
+    total_tasks = len(tasks)
+    for idx, ((setup_name, intensity), J, run) in enumerate(tasks, start=1):
+        sim_file = SIM_DIR / f"{setup_name}_J{J}_run{run}.pkl"
 
-            # -- load or (re)run -------------------------------------------------
-            try:
-                data = pickle.loads(sim_file.read_bytes()) if sim_file.exists() else None
-                # If the pickle isn't the new dict format, force a rerun
-                if not (isinstance(data, dict) and
-                        all(k in data for k in ("rho", "mines", "conflicts", "rain"))):
-                    raise ValueError("old-format pickle")
-            except Exception:
-                seed = seed_base + hash(setup_name) % 10_000 + J * 100 + run
-                data = run_once(J, intensity, seed)
-                sim_file.write_bytes(pickle.dumps(data))
+        try:
+            data = pickle.loads(sim_file.read_bytes()) if sim_file.exists() else None
+            if not (isinstance(data, dict) and
+                    all(k in data for k in ("rho", "mines", "conflicts", "rain"))):
+                raise ValueError("old-format pickle")
+        except Exception:
+            # Stable, reproducible seed across sessions / machines.
+            setup_offset = SETUP_SEED_OFFSETS[setup_name]
+            seed = seed_base + setup_offset + J * 100 + run
 
-            conflict_total = int(data["conflicts"].sum())
-            records.append({"setup": setup_name, "J": J,
-                            "run": run, "conflicts": conflict_total})
+            data = run_once(J, intensity, seed)
+            sim_file.write_bytes(pickle.dumps(data))
 
-            pbar.set_postfix(setup=setup_name, J=J, run=run,
-                             conflicts=conflict_total)
-            pbar.update(1)
+        conflict_total = int(data["conflicts"].sum())
+        records.append({"setup": setup_name, "J": J,
+                        "run": run, "conflicts": conflict_total})
+
+        print(
+            f"[{idx}/{total_tasks}] setup={setup_name} J={J} run={run} "
+            f"conflicts={conflict_total}"
+        )
 
     # ---------- 10. Save results ------------------------------------
     df = pd.DataFrame(records)
@@ -404,7 +423,7 @@ def main():  # noqa: C901
     plt.ylabel("Conflicts per run")
     plt.tight_layout()
     plt.savefig("conflict_violin_grouped.png", dpi=300)
-    plt.close()
+    
     print("📊 Figure saved to conflict_violin_grouped.png")
 
 
@@ -423,9 +442,51 @@ from pathlib import Path
 # ---------------------------------------------------------------------
 #  Adjust this if the variable already exists in your notebook / script
 # ---------------------------------------------------------------------
-SIM_DIR = get_sim_dir()
+try:
+    import google.colab  # type: ignore
+    IN_COLAB = True
+except ModuleNotFoundError:
+    IN_COLAB = False
+
+SIM_DIR = Path("drive/MyDrive/B_ForestConflict") if IN_COLAB else Path("ForestConflict")
 SIM_DIR.mkdir(parents=True, exist_ok=True)
 print(SIM_DIR)
+
+if IN_COLAB:
+    src = Path("conflict_counts_grouped.csv")
+    dst = Path("drive/MyDrive/B_ForestConflict/conflict_counts_grouped.csv")
+
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(src, dst)
+
+    print(f"📁 Copied {src} → {dst}")
+
+
+def ensure_conflict_csv_in_sim_dir() -> Path:
+    """Ensure conflict_counts_grouped.csv exists in SIM_DIR."""
+    dst_csv = SIM_DIR / "conflict_counts_grouped.csv"
+    if dst_csv.exists():
+        return dst_csv
+
+    script_dir = Path(__file__).resolve().parent
+    candidate_sources = [
+        Path("conflict_counts_grouped.csv"),
+        script_dir / "conflict_counts_grouped.csv",
+        script_dir.parent / "conflict_counts_grouped.csv",
+    ]
+
+    for src_csv in candidate_sources:
+        if src_csv.exists():
+            dst_csv.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(src_csv, dst_csv)
+            print(f"📁 Copied {src_csv} → {dst_csv}")
+            return dst_csv
+
+    raise FileNotFoundError(
+        f"Could not find conflict_counts_grouped.csv in expected locations. "
+        f"Checked: {', '.join(str(p) for p in candidate_sources)}"
+    )
+
 
 # ---------------------------------------------------------------------
 #  Main plotting helper
@@ -444,15 +505,12 @@ def boxplot_from_csv():
         "axes.spines.right": False,
     })
 
-    # ── 2. Copy CSV into project folder ───────────────────────────────
-    src_csv = Path("conflict_counts_grouped.csv") # comment this in if files was not just created
-    dst_csv = SIM_DIR / src_csv.name
-    shutil.copy(src_csv, dst_csv)
-    print(f"📁 Copied {src_csv} → {dst_csv}")
+    # ── 2. Read CSV from the same simulation folder ───────────────────
+    src_csv = ensure_conflict_csv_in_sim_dir()
+    df = pd.read_csv(src_csv)
+    print(f"📁 Loaded {src_csv}")
 
     # ── 3. Baseline box-plot (conflicts per setup) ────────────────────
-    df = pd.read_csv(dst_csv)
-
     plt.figure(figsize=(5, 3.2))
     ax1 = sns.boxplot(data=df, x="J", y="conflicts",
                       hue="setup", palette="muted")
@@ -461,16 +519,13 @@ def boxplot_from_csv():
     ax1.set_xlabel("Resolution (J)")
     ax1.set_ylabel("Conflicts per Run")
 
-    # Thicker, black axes; remove top/right spines already via rcParams
     for spine in ["left", "bottom"]:
         ax1.spines[spine].set_linewidth(1.5)
         ax1.spines[spine].set_color("black")
 
-    # Grid: keep horizontal lines only, drop vertical
     ax1.yaxis.grid(True, linestyle=":", linewidth=0.7)
     ax1.xaxis.grid(False)
 
-    # Legend outside, no frame
     ax1.legend(title="Setup", loc="center left",
                bbox_to_anchor=(1.02, 0.5), frameon=False)
 
@@ -478,7 +533,7 @@ def boxplot_from_csv():
     plt.savefig(SIM_DIR / "conflict_boxplot.jpg", dpi=300, bbox_inches="tight")
     plt.savefig(SIM_DIR / "conflict_boxplot.pdf", bbox_inches="tight")
     print("🖼️ Saved conflict_boxplot.jpg / .pdf")
-    plt.close()
+ 
 
     # ── 4. ATE (mining_on − mining_off) per run & J ───────────────────
     ate_records = []
@@ -494,7 +549,6 @@ def boxplot_from_csv():
     ate_df = pd.DataFrame(ate_records)
 
     plt.figure(figsize=(4.5, 3))
-    # Fix deprecation: set hue equal to x, then drop legend
     ax2 = sns.boxplot(data=ate_df, x="J", y="ATE", color=sns.color_palette("muted")[3])
     if ax2.get_legend():
         ax2.get_legend().remove()
@@ -504,7 +558,6 @@ def boxplot_from_csv():
     ax2.set_xlabel("Resolution ($J$)")
     ax2.set_ylabel("Δ Conflicts")
 
-    # Axes styling
     for spine in ["left", "bottom"]:
         ax2.spines[spine].set_linewidth(1.5)
         ax2.spines[spine].set_color("black")
@@ -515,7 +568,7 @@ def boxplot_from_csv():
     plt.savefig(SIM_DIR / "ate_boxplot.jpg", dpi=300, bbox_inches="tight")
     plt.savefig(SIM_DIR / "ate_boxplot.pdf", bbox_inches="tight")
     print("🖼️ Saved ate_boxplot.jpg / .pdf")
-    plt.close()
+
 
 
 # ---------------------------------------------------------------------
@@ -544,7 +597,13 @@ import seaborn as sns
 from matplotlib import cm
 
 # ---------- 0. Locate (and ensure) simulation directory -----------
-SIM_DIR = get_sim_dir()
+try:
+    import google.colab  # type: ignore
+    IN_COLAB = True
+except ModuleNotFoundError:
+    IN_COLAB = False
+
+SIM_DIR = Path("/content/drive/MyDrive/B_ForestConflict") if IN_COLAB else Path("ForestConflict")
 SIM_DIR.mkdir(parents=True, exist_ok=True)           # ← ensure it exists
 
 OVERWRITE = True  # set False to skip already-visualised runs
@@ -683,4 +742,3 @@ for pkl_path in pkl_files:
             out_path=out_path,
         )
 
-#!cp drive/MyDrive/A_ForestConflict/conflict_counts_grouped.csv  conflict_counts_grouped.csv
